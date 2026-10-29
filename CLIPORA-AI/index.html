@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charSet="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CLIPORA AI | Smart Media Studio</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <h2 class="logo">◉ CLIPORA <span>AI</span></h2>
+
+      <nav>
+        <button class="nav-btn active" data-page="dashboard">⌂ Dashboard</button>
+        <button class="nav-btn" data-page="upload">⇧ Upload Recording</button>
+        <button class="nav-btn" data-page="search">⌕ ✨ Smart Search</button>
+        <button class="nav-btn" data-page="ai-summary">✨ AI Summary</button>
+        <button class="nav-btn" data-page="ai-studio">✨ AI Studio</button>
+        <button class="nav-btn" data-page="projects">▣ My Projects</button>
+        <button class="nav-btn" data-page="editor">✂ Video Editor</button>
+        <button class="nav-btn" data-page="history">◷ Edit History</button>
+        <button class="nav-btn" data-page="settings">⚙ Settings</button>
+      </nav>
+
+      <div class="promo">
+        <div class="wave">〰</div>
+        <h3>Transform your recordings</h3>
+        <p>Search, summarize and organize your media.</p>
+        <button class="primary" data-go="upload">Get Started Free</button>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <input id="globalSearch" placeholder="⌕ Search recordings..." aria-label="Search recordings">
+        <div class="user">🔔 <span class="avatar">U</span> Hello, User</div>
+      </header>
+
+      <!-- DASHBOARD -->
+      <section id="dashboard" class="page active-page">
+        <h1>Good Morning, User! 👋</h1>
+        <p class="muted">Find key moments, edit with confidence, preserve the original meaning.</p>
+
+        <div class="grid">
+          <article class="card hero span-8">
+            <div class="hero-text">
+              <small class="cyan">CONTEXT-AWARE SMART MEDIA STUDIO</small>
+              <h1>Edit Video <span class="cyan">Without Losing Meaning.</span></h1>
+              <p>Find, edit and enhance your video and audio recordings. Search, summarize and organize your media in one place.</p>
+              <button class="primary" data-go="upload">Get Started Free →</button>
+              <button class="outline" id="demoBtn">▷ Watch Demo</button>
+            </div>
+            <div class="media-art">
+              <div class="fake-video"><button class="play" data-go="upload">▶</button></div>
+              <div class="waveform"></div>
+              <small>AI Clip Preview · 00:02:10</small>
+            </div>
+          </article>
+
+          <article class="card span-4">
+            <h3 class="card-title">Main Dashboard</h3>
+            <div class="stats">
+              <div class="stat"><strong id="recordCount">3</strong><small>Recordings</small></div>
+              <div class="stat"><strong id="clipCount">0</strong><small>Clips marked</small></div>
+            </div>
+            <button class="action" data-go="upload">📤 Upload Recording <span>→</span></button>
+            <button class="action" data-go="search">🔎 Search Recording <span>→</span></button>
+            <button class="action" data-go="projects">📁 My Projects <span>→</span></button>
+          </article>
+
+          <article class="card span-12">
+            <h3 class="card-title">Key Features</h3>
+            <div class="features">
+              <div class="feature"><b>▣</b><h4>Audio & Video Upload</h4><p>Select your media files.</p></div>
+              <div class="feature"><b>⌕</b><h4>Smart Search</h4><p>Search recording titles and notes.</p></div>
+              <div class="feature"><b>◷</b><h4>Timestamp Detection</h4><p>Mark important time ranges.</p></div>
+              <div class="feature"><b>✂</b><h4>Clip Extraction</h4><p>Select a useful clip range.</p></div>
+              <div class="feature"><b>✦</b><h4>AI Summary Draft</h4><p>Create a summary from text.</p></div>
+              <div class="feature"><b>☷</b><h4>Content Analysis</h4><p>Review important notes.</p></div>
+              <div class="feature"><b>◈</b><h4>MeaningGuard</h4><p>Review edits before applying.</p></div>
+              <div class="feature"><b>↺</b><h4>Edit History</h4><p>Track recent actions.</p></div>
+            </div>
+          </article>
+
+          <article class="card span-12">
+            <h3 class="card-title">Recent Recordings</h3>
+            <div id="recentList"></div>
+          </article>
+        </div>
+      </section>
+
+      <!-- UPLOAD -->
+      <section id="upload" class="page">
+        <h1>Upload Recording</h1>
+        <p class="muted">Select a video or audio file from your device.</p>
+        <div class="grid">
+          <article class="card span-6">
+            <h3 class="card-title">Media Details</h3>
+            <div class="content">
+              <label for="mediaTitle">Recording title</label>
+              <input class="field" id="mediaTitle" placeholder="Enter recording title">
+              <label for="mediaFile">Choose video or audio</label>
+              <input class="field" id="mediaFile" type="file" accept="video/*,audio/*">
+              <label for="notes">Notes / transcript</label>
+              <textarea class="field" id="notes" rows="5" placeholder="Paste your notes or transcript here..."></textarea>
+              <button class="primary" id="addMediaBtn">Add to My Projects</button>
+            </div>
+          </article>
+          <article class="card span-6">
+            <h3 class="card-title">Media Preview</h3>
+            <div class="content" id="uploadPreview">
+              <div class="fake-video"><span class="play">▶</span></div>
+              <p class="muted">Your selected media will appear here.</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- SEARCH -->
+      <!-- SEARCH -->
+<!-- SMART SEARCH -->
+<section id="search" class="page">
+  <h1>✨ Smart Search</h1>
+  <p class="muted">
+    Find the exact moment in any recording — just ask AI.
+  </p>
+
+  <article class="card smart-search-card">
+    <h3 class="card-title">📁 Upload Recording</h3>
+
+    <div class="content">
+      <label for="searchFile">Your audio or video</label>
+      <input
+        class="field"
+        id="searchFile"
+        type="file"
+        accept="video/*,audio/*"
+      />
+
+      <div id="searchFilePreview"></div>
+
+      <div class="smart-question">
+        <label for="query">💬 What do you want to find?</label>
+        <textarea
+          class="field"
+          id="query"
+          rows="4"
+          placeholder="e.g. Find the moment where the speaker explains cloud security..."
+        ></textarea>
+        <p class="muted">
+          Ask in your own words. No timestamps needed.
+        </p>
+      </div>
+
+      <button class="primary" id="searchBtn" type="button">
+        ✨ Find Relevant Moment
+      </button>
+
+      <div
+        id="smartResult"
+        class="smart-result"
+        style="display:none"
+      >
+        <div class="smart-result-heading">
+          <h3>🎯 Matching Moment</h3>
+          <p id="clipDuration" class="muted"></p>
+        </div>
+
+        <video
+          id="clipPreview"
+          controls
+          playsinline
+          style="display:none;width:100%;max-height:350px"
+        ></video>
+
+        <audio
+          id="audioPreview"
+          controls
+          style="display:none;width:100%"
+        ></audio>
+
+        <div class="smart-summary">
+          <h3>📝 AI Summary</h3>
+          <p id="clipSummary">
+            Your matching moment and summary will appear here.
+          </p>
+        </div>
+
+        <p id="smartStatus" class="muted" aria-live="polite"></p>
+
+        <a
+          id="downloadClip"
+          class="primary"
+          href="#"
+          download
+          style="display:none"
+        >⬇️ Download Extracted Clip</a>
+      </div>
+    </div>
+  </article>
+</section>
+<!-- AI STUDIO -->
+<section id="ai-studio" class="page">
+  <h1>✨ AI Studio</h1>
+  <p class="muted">Create anything from your imagination.</p>
+
+  <article class="card">
+    <h3 class="card-title">Describe what you want to create</h3>
+
+    <div class="content">
+      <textarea
+        id="studioPrompt"
+        class="field"
+        rows="4"
+        placeholder="Describe an image, video or audio..."
+      ></textarea>
+
+      <label for="studioFile">Upload reference file</label>
+      <input
+        id="studioFile"
+        class="field"
+        type="file"
+        accept="image/*,video/*,audio/*"
+      />
+
+      <div id="studioPreview"></div>
+
+      <label for="studioType">Choose output type</label>
+      <select id="studioType" class="field">
+        <option value="image">Image</option>
+        <option value="video">Video</option>
+        <option value="audio">Audio</option>
+        <option value="storyboard">Storyboard</option>
+      </select>
+
+      <button class="primary" id="studioGenerate">
+        ✨ Generate
+      </button>
+
+      <div id="studioResult"></div>
+    </div>
+  </article>
+</section>
+<!-- AI SUMMARY -->
+<section id="ai-summary" class="page">
+  <h1>✨ AI Summary</h1>
+  <p class="muted">
+    Upload a file and generate your summary.
+  </p>
+
+  <article class="card">
+    <h3 class="card-title">Upload Your File</h3>
+
+    <div class="content">
+      <input
+        class="field"
+        type="file"
+        id="summaryFile"
+        accept=".pdf,.txt,.doc,.docx,.png,.jpg,.jpeg,.webp,.mp3,.wav,.m4a,.mp4,.webm"
+        multiple
+      >
+
+      <div id="summaryFileList"></div>
+
+      <p id="summaryStatus" class="muted">
+        Select a file to begin.
+      </p>
+
+      <textarea
+        id="summaryOutput"
+        class="field"
+        rows="10"
+        placeholder="Your AI summary will appear here..."
+      ></textarea>
+
+      <button class="primary" id="handwrittenBtn">
+        Generate Handwritten Image
+      </button>
+
+      <button class="primary" id="downloadSummaryPdf">
+        Download Summary PDF
+      </button>
+
+      <div id="handwrittenPreview"></div>
+    </div>
+  </article>
+</section>
+      <!-- PROJECTS -->
+      <section id="projects" class="page">
+        <h1>My Projects</h1>
+        <p class="muted">Your recording library.</p>
+        <article class="card">
+          <h3 class="card-title">Recording Library</h3>
+          <div class="content" id="projectList"></div>
+        </article>
+      </section>
+
+      <!-- VIDEO EDITOR MODULE -->
+<section id="editor" class="page">
+  <h1>Video Editor</h1>
+  <p class="muted">Your creative workspace for video, photos and collages.</p>
+
+  <div class="studio-choices" id="studioChoices">
+    <button class="studio-card" data-studio="video" type="button">
+      <span class="studio-icon">🎬</span>
+      <h2>Video Editing</h2>
+      <p>Edit clips, arrange timelines, add text, audio and effects.</p>
+      <span class="studio-open">Open Video Studio →</span>
+    </button>
+
+    <button class="studio-card" data-studio="photo" type="button">
+      <span class="studio-icon">🖼️</span>
+      <h2>Photo Editing</h2>
+      <p>Crop photos, adjust colors, add filters, text and stickers.</p>
+      <span class="studio-open">Open Photo Studio →</span>
+    </button>
+
+    <button class="studio-card" data-studio="collage" type="button">
+      <span class="studio-icon">▦</span>
+      <h2>Collage Maker</h2>
+      <p>Combine two or more photos into a creative layout.</p>
+      <span class="studio-open">Open Collage Studio →</span>
+    </button>
+  </div>
+
+  <!-- VIDEO STUDIO -->
+  <div id="videoStudio" class="studio-workspace hidden">
+    <button class="outline studio-back" data-back type="button">← All Studios</button>
+    <h2>🎬 Video Edit Studio</h2>
+
+    <div class="studio-layout">
+      <article class="card">
+        <h3 class="card-title">Media & Tools</h3>
+        <div class="content">
+          <label for="veFile">Upload video</label>
+          <input class="field" id="veFile" type="file" accept="video/*">
+
+          <label for="veToolSearch">Search tools</label>
+          <input class="field" id="veToolSearch" placeholder="Search tools...">
+
+          <div id="veTools" class="tool-list">
+            <button type="button" data-ve-tool="trim">Trim</button>
+            <button type="button" data-ve-tool="split">Split at playhead</button>
+            <button type="button" data-ve-tool="speed">Speed</button>
+            <button type="button" data-ve-tool="volume">Volume</button>
+            <button type="button" data-ve-tool="text">Add text</button>
+            <button type="button" data-ve-tool="filter">Filter</button>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <h3 class="card-title">Preview & Properties</h3>
+        <div class="content">
+          <video id="vePreview" controls playsinline
+            style="display:none;width:100%;max-height:360px"></video>
+          <p id="veStatus" class="muted">Upload a video to begin.</p>
+
+          <label for="veStart">Trim start (seconds)</label>
+          <input class="field" id="veStart" type="number" min="0" value="0">
+
+          <label for="veEnd">Trim end (seconds)</label>
+          <input class="field" id="veEnd" type="number" min="0" value="10">
+
+          <label for="veSpeed">Playback speed</label>
+          <select class="field" id="veSpeed">
+            <option value="0.5">0.5×</option>
+            <option value="1" selected>1× Normal</option>
+            <option value="1.5">1.5×</option>
+            <option value="2">2×</option>
+          </select>
+
+          <label for="veVolume">Volume</label>
+          <input class="field" id="veVolume" type="range" min="0" max="1" step="0.1" value="1">
+
+          <label for="veText">Text overlay</label>
+          <input class="field" id="veText" placeholder="Enter title or caption">
+
+          <label for="veFilter">Preview filter</label>
+          <select class="field" id="veFilter">
+            <option value="none">Original</option>
+            <option value="grayscale(1)">Black & White</option>
+            <option value="sepia(1)">Vintage</option>
+            <option value="contrast(1.4) saturate(1.3)">High Contrast</option>
+          </select>
+
+          <button class="primary" id="veApply" type="button">Apply Preview Settings</button>
+          <button class="outline" id="veTrimPreview" type="button">Preview Trim Range</button>
+          <button class="outline" id="veExport" type="button">Export / Download</button>
+          <p id="veOverlay" class="video-overlay"></p>
+        </div>
+      </article>
+    </div>
+
+    <article class="card studio-timeline">
+      <h3 class="card-title">Timeline</h3>
+      <div class="content">
+        <p class="muted">Uploaded video · Playhead-based preview</p>
+        <input id="vePlayhead" type="range" min="0" max="100" value="0" step="0.1">
+        <div class="timeline-track">🎬 Video track</div>
+        <div class="timeline-track audio-track">🔊 Audio track</div>
+        <p class="muted">A real multi-clip timeline and frame-accurate splitting require a media-processing implementation.</p>
+      </div>
+    </article>
+  </div>
+
+  <!-- PHOTO STUDIO -->
+  <div id="photoStudio" class="studio-workspace hidden">
+    <button class="outline studio-back" data-back type="button">← All Studios</button>
+    <h2>🖼️ Photo Edit Studio</h2>
+
+    <div class="studio-layout">
+      <article class="card">
+        <h3 class="card-title">Upload & Tools</h3>
+        <div class="content">
+          <label for="peFiles">Choose photos</label>
+          <input class="field" id="peFiles" type="file" accept="image/*" multiple>
+
+          <label for="peToolSearch">Search tools</label>
+          <input class="field" id="peToolSearch" placeholder="Search photo tools...">
+
+          <div id="peTools" class="tool-list">
+            <button type="button" data-pe-tool="crop">Crop</button>
+            <button type="button" data-pe-tool="rotate">Rotate</button>
+            <button type="button" data-pe-tool="grayscale">Black & White</button>
+            <button type="button" data-pe-tool="sepia">Vintage Filter</button>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <h3 class="card-title">Photo Canvas</h3>
+        <div class="content">
+          <div class="photo-canvas">
+            <img id="pePreview" alt="Selected photo preview" style="display:none">
+            <p id="pePlaceholder" class="muted">Your photo will appear here.</p>
+          </div>
+
+          <label for="peBrightness">Brightness</label>
+          <input class="field" id="peBrightness" type="range" min="50" max="150" value="100">
+
+          <label for="peContrast">Contrast</label>
+          <input class="field" id="peContrast" type="range" min="50" max="150" value="100">
+
+          <label for="peFilter">Filter</label>
+          <select class="field" id="peFilter">
+            <option value="none">Original</option>
+            <option value="grayscale(1)">Black & White</option>
+            <option value="sepia(1)">Vintage</option>
+            <option value="saturate(1.8)">Vivid</option>
+          </select>
+
+          <label for="peText">Add text</label>
+          <input class="field" id="peText" placeholder="Write a caption">
+
+          <button class="primary" id="peApply" type="button">Apply Changes</button>
+          <button class="outline" id="peDownload" type="button">Download Photo</button>
+          <p id="peStatus" class="muted"></p>
+        </div>
+      </article>
+    </div>
+  </div>
+
+  <!-- COLLAGE STUDIO -->
+  <div id="collageStudio" class="studio-workspace hidden">
+    <button class="outline studio-back" data-back type="button">← All Studios</button>
+    <h2>▦ Photo & Collage Studio</h2>
+
+    <article class="card">
+      <h3 class="card-title">Create a Collage</h3>
+      <div class="content">
+        <label for="coFiles">Choose 2–6 photos</label>
+        <input class="field" id="coFiles" type="file" accept="image/*" multiple>
+
+        <label for="coLayout">Layout</label>
+        <select class="field" id="coLayout">
+          <option value="2">Two columns</option>
+          <option value="3">Three columns</option>
+          <option value="1">Single column</option>
+        </select>
+
+        <label for="coGap">Photo spacing</label>
+        <input class="field" id="coGap" type="range" min="0" max="20" value="6">
+
+        <label for="coBg">Background color</label>
+        <input class="field" id="coBg" type="color" value="#ffffff">
+
+        <div id="coCanvas" class="collage-canvas">
+          <p class="muted">Choose photos to build your collage.</p>
+        </div>
+
+        <button class="primary" id="coDownload" type="button">Download Collage</button>
+        <p id="coStatus" class="muted"></p>
+      </div>
+    </article>
+  </div>
+</section>
+      
+
+      <!-- HISTORY -->
+      <section id="history" class="page">
+        <h1>Edit History</h1>
+        <p class="muted">Review actions performed during this session.</p>
+        <article class="card">
+          <h3 class="card-title">Activity Log <button class="outline" id="clearHistoryBtn">Clear History</button></h3>
+          <div class="content" id="historyList"></div>
+        </article>
+      </section>
+
+      <!-- SETTINGS -->
+      <section id="settings" class="page">
+        <h1>Settings</h1>
+        <p class="muted">Manage your local profile preferences.</p>
+        <article class="card span-6">
+          <h3 class="card-title">Profile</h3>
+          <div class="content">
+            <label for="userName">Name</label>
+            <input class="field" id="userName" value="User">
+            <label for="userEmail">Email</label>
+            <input class="field" id="userEmail" type="email" value="user@example.com">
+            <button class="primary" id="saveProfileBtn">Save Profile</button>
+            <hr>
+            <label><input type="checkbox" checked> Enable edit suggestions</label><br><br>
+            <label><input type="checkbox" checked> Enable summary drafts</label>
+          </div>
+        </article>
+      </section>
+
+      <footer class="footer">
+        
+        <div class="footer-center"><h2>◉ CLIPORA <span>AI</span></h2><p>Context-Aware Smart Media Production System</p><b>Edit. Search. Summarize. Preserve.</b></div>
+        
+      </footer>
+    </main>
+  </div>
+  <div id="toast" class="toast hidden"></div>
+  <script src="script.js"></script>
+</body>
+</html>
