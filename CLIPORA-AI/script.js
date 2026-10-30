@@ -318,127 +318,227 @@ function searchRecordings() {
   logAction("Searched recordings");
 }
 
-  if (!matches.length) {
-    const message = document.createElement("div");
-    message.className = "result";
-    message.textContent = "No matching recording found. Try project, meeting, class, or next steps.";
-    results.appendChild(message);
-  }
-
-  matches.forEach(item => {
-    const result = document.createElement("div");
-    result.className = "result";
-
-    const heading = document.createElement("h3");
-    heading.className = "cyan";
-    heading.textContent = "Relevant Recording Found";
-
-    const details = document.createElement("p");
-    details.textContent = item.title + " — " + (item.notes || "No notes added.");
-
-    result.append(heading, details);
-    results.appendChild(result);
-  });
-
-  logAction(`Searched for "${query}"`);
-
-
-$("searchBtn").addEventListener("click", showSmartSearchResult);
+const searchBtn = $("searchBtn");
+if (searchBtn) {
+  searchBtn.addEventListener("click", showSmartSearchResult);
+}
 
 let smartMediaURL = null;
 
-function showSmartSearchResult() {
-  const file = $("searchFile").files[0];
-  const question = $("query").value.trim();
+async function showSmartSearchResult() {
+  const fileInput = $("searchFile");
+  const file = fileInput ? fileInput.files[0] : null;
+  const question = $("query") ? $("query").value.trim() : "";
+  const searchBtn = $("searchBtn");
+  const resultBox = $("smartResult");
+  const durationBox = $("clipDuration");
+  const video = $("clipPreview");
+  const audio = $("audioPreview");
+  const summaryBox = $("clipSummary");
+  const statusBox = $("smartStatus");
+  const downloadBtn = $("downloadClip");
 
   if (!file) {
-    alert("Please upload a video or audio file.");
+    alert("Please select or upload an audio or video file first.");
+    if (fileInput) fileInput.focus();
     return;
   }
 
   if (!question) {
-    alert("Please ask a question about your recording.");
+    alert("Please enter what you want to find in the recording.");
+    if ($("query")) $("query").focus();
     return;
   }
 
-  if (smartMediaURL) {
-    URL.revokeObjectURL(smartMediaURL);
+  // Container for additional matches
+  let matchesContainer = $("smartMatchesList");
+  if (!matchesContainer && resultBox) {
+    matchesContainer = document.createElement("div");
+    matchesContainer.id = "smartMatchesList";
+    resultBox.appendChild(matchesContainer);
+  }
+  if (matchesContainer) matchesContainer.innerHTML = "";
+
+  resultBox.style.display = "block";
+  if (video) video.style.display = "none";
+  if (audio) audio.style.display = "none";
+  if (downloadBtn) downloadBtn.style.display = "none";
+
+  durationBox.textContent = `Analyzing: ${file.name}`;
+  summaryBox.textContent = `Searching for: "${question}"`;
+  statusBox.innerHTML = `<span class="cyan">✨ Analyzing audio with Gemini AI & extracting matching clips with FFmpeg... Please wait.</span>`;
+
+  resultBox.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  if (searchBtn) {
+    searchBtn.disabled = true;
+    searchBtn.style.opacity = "0.6";
   }
 
-  smartMediaURL = URL.createObjectURL(file);
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("query", question);
 
-  const isVideo = file.type.startsWith("video/");
-  const video = $("clipPreview");
-  const audio = $("audioPreview");
-  const media = isVideo ? video : audio;
-  const other = isVideo ? audio : video;
+    console.log("Sending Smart Search request to backend...", { filename: file.name, query: question });
 
-  other.pause();
-  other.removeAttribute("src");
-  other.style.display = "none";
+    const response = await fetch("http://127.0.0.1:8000/api/search/audio", {
+      method: "POST",
+      body: formData
+    });
 
-  media.src = smartMediaURL;
-  media.style.display = "block";
+    let data = {};
+    try {
+      data = await response.json();
+    } catch {
+      data = { detail: await response.text() };
+    }
 
-  $("smartResult").style.display = "block";
-  $("clipDuration").textContent = "Uploaded: " + file.name;
+    if (!response.ok) {
+      throw new Error(data.detail || data.error || `Server error (${response.status}: ${response.statusText})`);
+    }
 
-  $("clipSummary").textContent =
-    "Your question: " + question;
+    const matches = data.matches || [];
+    if (matches.length === 0) {
+      durationBox.textContent = "No matching moments found";
+      summaryBox.textContent = "Gemini analyzed the audio but found no direct segments matching your query.";
+      statusBox.textContent = "Try asking with different keywords or topics from the audio.";
+      return;
+    }
 
-  $("smartStatus").textContent =
-    "Recording loaded. AI matching, timestamp detection and clip extraction will work after backend integration.";
+    // Populate primary match into the main card
+    const first = matches[0];
+    durationBox.textContent = `⏱️ ${first.start_timestamp} – ${first.end_timestamp} (${first.title})`;
+    summaryBox.innerHTML = `
+      <p style="margin-bottom: 8px;"><strong>Snippet:</strong> <em>"${first.snippet}"</em></p>
+      <p style="color: var(--muted); font-size: 13px;"><strong>Why it matches:</strong> ${first.explanation}</p>
+    `;
 
-  $("downloadClip").style.display = "none";
+    if (first.clip_url && audio) {
+      audio.src = first.clip_url;
+      audio.style.display = "block";
+      audio.load();
+    }
 
-  $("smartResult").scrollIntoView({
-    behavior: "smooth",
-    block: "start"
+    if (first.clip_url && downloadBtn) {
+      downloadBtn.href = first.clip_url;
+      downloadBtn.download = first.download_name || `${first.title}.mp3`;
+      downloadBtn.style.display = "inline-block";
+      downloadBtn.textContent = `⬇️ Download Clip (${first.start_timestamp} – ${first.end_timestamp})`;
+    }
+
+    statusBox.innerHTML = `<span style="color: #64ffb4;">✓ Found ${matches.length} matching segment(s) in audio! Extracted with FFmpeg.</span>`;
+
+    // Render additional matches if multiple were detected
+    if (matches.length > 1 && matchesContainer) {
+      const extraTitle = document.createElement("h4");
+      extraTitle.style.marginTop = "24px";
+      extraTitle.style.marginBottom = "12px";
+      extraTitle.className = "cyan";
+      extraTitle.textContent = "Additional Relevant Moments:";
+      matchesContainer.appendChild(extraTitle);
+
+      matches.slice(1).forEach((m, idx) => {
+        const card = document.createElement("div");
+        card.className = "smart-summary";
+        card.style.marginTop = "14px";
+        card.style.border = "1px solid rgba(0, 216, 245, 0.25)";
+
+        card.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <h4 style="margin: 0; color: #fff;">${idx + 2}. ${m.title}</h4>
+            <span class="pill" style="font-size: 11px;">⏱️ ${m.start_timestamp} – ${m.end_timestamp}</span>
+          </div>
+          <p style="margin-bottom: 8px;"><em>"${m.snippet}"</em></p>
+          <p style="color: var(--muted); font-size: 12px; margin-bottom: 10px;">${m.explanation}</p>
+          ${m.clip_url ? `
+            <audio controls src="${m.clip_url}" style="width: 100%; margin: 8px 0; border-radius: 6px;"></audio>
+            <a class="outline" href="${m.clip_url}" download="${m.download_name || 'clip.mp3'}" style="display: inline-block; padding: 6px 14px; border-radius: 6px; font-size: 12px; text-decoration: none; margin-top: 6px;">⬇️ Download Segment</a>
+          ` : '<p class="muted small">Clip extraction skipped</p>'}
+        `;
+        matchesContainer.appendChild(card);
+      });
+    }
+
+    if (typeof logAction === "function") {
+      logAction(`Smart Search: Found ${matches.length} moment(s) for "${question.substring(0, 25)}"`);
+    }
+    if (typeof notify === "function") {
+      notify("Relevant moment(s) found and clipped!");
+    }
+
+  } catch (err) {
+    console.error("Smart Search Error:", err);
+    durationBox.textContent = "Search Failed";
+    summaryBox.innerHTML = `
+      <div style="color: #ff6b6b; padding: 12px; border-radius: 8px; background: rgba(255, 60, 60, 0.08); line-height: 1.5;">
+        <strong>Error:</strong> ${err.message}
+        <br><br>
+        <small style="color: var(--muted);">Please ensure the backend is running at <code>http://127.0.0.1:8000</code> and FFmpeg is accessible.</small>
+      </div>
+    `;
+    statusBox.textContent = "Please try again with another query or audio file.";
+  } finally {
+    if (searchBtn) {
+      searchBtn.disabled = false;
+      searchBtn.style.opacity = "1";
+    }
+  }
+}
+
+const markClipBtn = $("markClipBtn");
+if (markClipBtn) {
+  markClipBtn.addEventListener("click", () => {
+    const start = Number($("clipStart")?.value || 0);
+    const end = Number($("clipEnd")?.value || 0);
+
+    if (start < 0 || end <= start) {
+      notify("End time must be greater than start time.");
+      return;
+    }
+
+    clipCount++;
+    updateCounts();
+
+    if ($("clipMessage")) $("clipMessage").textContent = `Clip range marked: ${start}s – ${end}s`;
+    logAction(`Marked clip range ${start}s–${end}s`);
+
+    notify("Range marked. Actual video export needs backend processing.");
   });
 }
 
-$("markClipBtn").addEventListener("click", () => {
-  const start = Number($("clipStart").value);
-  const end = Number($("clipEnd").value);
+const summaryBtn = $("summaryBtn");
+if (summaryBtn) {
+  summaryBtn.addEventListener("click", () => {
+    const summaryInputEl = $("summaryInput");
+    const text = summaryInputEl ? summaryInputEl.value.trim() : "";
 
-  if (start < 0 || end <= start) {
-    notify("End time must be greater than start time.");
-    return;
-  }
+    if (!text) {
+      notify("Enter notes or transcript text first.");
+      return;
+    }
 
-  clipCount++;
-  updateCounts();
+    const sentences = text.match(/[^.!?]+[.!?]?/g) || [text];
+    if ($("summaryText")) $("summaryText").textContent = sentences.slice(0, 3).join(" ").trim();
+    if ($("summaryResult")) $("summaryResult").classList.remove("hidden");
 
-  $("clipMessage").textContent = `Clip range marked: ${start}s – ${end}s`;
-  logAction(`Marked clip range ${start}s–${end}s`);
+    logAction("Created summary draft");
+    notify("Summary draft created!");
+  });
+}
 
-  notify("Range marked. Actual video export needs backend processing.");
-});
-
-$("summaryBtn").addEventListener("click", () => {
-  const text = $("summaryInput").value.trim();
-
-  if (!text) {
-    notify("Enter notes or transcript text first.");
-    return;
-  }
-
-  const sentences = text.match(/[^.!?]+[.!?]?/g) || [text];
-  $("summaryText").textContent = sentences.slice(0, 3).join(" ").trim();
-  $("summaryResult").classList.remove("hidden");
-
-  logAction("Created summary draft");
-  notify("Summary draft created!");
-});
-
-$("copySummaryBtn").addEventListener("click", async () => {
-  try {
-    await navigator.clipboard.writeText($("summaryText").textContent);
-    notify("Summary copied!");
-  } catch {
-    notify("Please select and copy the summary manually.");
-  }
-});
+const copySummaryBtn = $("copySummaryBtn");
+if (copySummaryBtn) {
+  copySummaryBtn.addEventListener("click", async () => {
+    try {
+      const summaryTextEl = $("summaryText");
+      if (summaryTextEl) await navigator.clipboard.writeText(summaryTextEl.textContent);
+      notify("Summary copied!");
+    } catch {
+      notify("Please select and copy the summary manually.");
+    }
+  });
+}
 
 function renderHistory() {
   const box = $("historyList");
@@ -466,25 +566,36 @@ function renderHistory() {
   });
 }
 
-$("clearHistoryBtn").addEventListener("click", () => {
-  historyItems = [];
-  renderHistory();
-  notify("Edit history cleared.");
-});
+const clearHistoryBtn = $("clearHistoryBtn");
+if (clearHistoryBtn) {
+  clearHistoryBtn.addEventListener("click", () => {
+    historyItems = [];
+    renderHistory();
+    notify("Edit history cleared.");
+  });
+}
 
-$("saveProfileBtn").addEventListener("click", () => {
-  const name = $("userName").value.trim() || "User";
-  $("userEmail").value = $("userEmail").value.trim();
+const saveProfileBtn = $("saveProfileBtn");
+if (saveProfileBtn) {
+  saveProfileBtn.addEventListener("click", () => {
+    const name = $("userName") ? $("userName").value.trim() : "User";
+    if ($("userEmail")) $("userEmail").value = $("userEmail").value.trim();
 
-  document.querySelector(".user").lastChild.textContent = " Hello, " + name;
-  logAction("Profile updated");
+    const userBadge = document.querySelector(".user");
+    if (userBadge && userBadge.lastChild) {
+      userBadge.lastChild.textContent = " Hello, " + (name || "User");
+    }
+    logAction("Profile updated");
+    notify("Profile updated in this prototype.");
+  });
+}
 
-  notify("Profile updated in this prototype.");
-});
-
-$("demoBtn").addEventListener("click", () => {
-  notify("Upload a video to preview your own recording.");
-});
+const demoBtn = $("demoBtn");
+if (demoBtn) {
+  demoBtn.addEventListener("click", () => {
+    notify("Upload a video to preview your own recording.");
+  });
+}
 
 updateCounts();
 renderProjects();
@@ -790,4 +901,166 @@ renderRecent();
       status("coStatus", "Could not create collage. Try different image files.");
     }
   });
+})();
+
+
+/* CLIPORA AI - AI STUDIO BACKEND INTEGRATION */
+(() => {
+  const initStudio = () => {
+    const generateBtn = document.getElementById("studioGenerate");
+    const promptInput = document.getElementById("studioPrompt");
+    const typeSelect = document.getElementById("studioType");
+    const fileInput = document.getElementById("studioFile");
+    const previewBox = document.getElementById("studioPreview");
+    const resultBox = document.getElementById("studioResult");
+
+    if (!generateBtn || !promptInput || !resultBox) {
+      console.warn("AI Studio elements not found:", { generateBtn, promptInput, resultBox });
+      return;
+    }
+
+    if (fileInput && previewBox) {
+      fileInput.addEventListener("change", function () {
+        previewBox.replaceChildren();
+        const file = this.files[0];
+        if (!file) return;
+
+        const p = document.createElement("p");
+        p.className = "muted";
+        p.textContent = `Attached reference: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+        previewBox.appendChild(p);
+      });
+    }
+
+    generateBtn.addEventListener("click", async () => {
+      const prompt = promptInput.value.trim();
+      const type = typeSelect ? typeSelect.value : "image";
+      const file = fileInput && fileInput.files ? fileInput.files[0] : null;
+
+      if (!prompt) {
+        resultBox.style.display = "block";
+        resultBox.innerHTML = `
+          <div class="smart-result" style="margin-top: 20px; border-color: rgba(255, 180, 50, 0.4); background: rgba(255, 180, 50, 0.05); padding: 16px; border-radius: 12px;">
+            <h3 style="color: #ffb432; margin-bottom: 6px;">⚠️ Description Required</h3>
+            <p class="muted">Please enter what you want to create in the text box above before clicking Generate.</p>
+          </div>
+        `;
+        promptInput.focus();
+        return;
+      }
+
+      resultBox.style.display = "block";
+      resultBox.innerHTML = `
+        <div class="smart-result" style="margin-top: 20px; padding: 20px; border-radius: 12px;">
+          <h3 class="cyan">✨ Generating ${type.toUpperCase()}...</h3>
+          <p class="muted" style="margin-top: 6px;">Connecting to backend at <code>http://127.0.0.1:8000</code>. Calling Gemini AI...</p>
+        </div>
+      `;
+
+      generateBtn.disabled = true;
+      generateBtn.style.opacity = "0.6";
+
+      try {
+        const formData = new FormData();
+        formData.append("prompt", prompt);
+        formData.append("studio_type", type);
+        if (file) {
+          formData.append("file", file);
+        }
+
+        console.log("Sending AI Studio generation request...", { prompt, type, hasFile: !!file });
+
+        const response = await fetch("http://127.0.0.1:8000/api/studio/generate", {
+          method: "POST",
+          body: formData
+        });
+
+        let data = {};
+        try {
+          data = await response.json();
+        } catch (jsonErr) {
+          const rawText = await response.text();
+          data = { detail: rawText || `HTTP ${response.status}: ${response.statusText}` };
+        }
+
+        console.log("AI Studio generation response:", response.status, data);
+
+        if (!response.ok) {
+          throw new Error(data.detail || data.error || `Server error (${response.status}: ${response.statusText})`);
+        }
+
+        resultBox.innerHTML = "";
+        const container = document.createElement("div");
+        container.className = "smart-result";
+        container.style.marginTop = "20px";
+
+        if (data.type === "image") {
+          container.innerHTML = `
+            <div class="smart-result-heading">
+              <h3 class="cyan">🎨 Generated Image (Imagen 3)</h3>
+              <p class="muted">${data.prompt}</p>
+            </div>
+            <div style="text-align: center; margin: 15px 0;">
+              <img src="${data.data}" alt="AI Generated" style="max-width: 100%; border-radius: 12px; border: 1px solid var(--line); box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+            </div>
+            <a class="primary" href="${data.data}" download="clipora-generated-image.jpg" style="display: inline-block; text-decoration: none; padding: 10px 18px; border-radius: 8px;">⬇️ Download Image</a>
+          `;
+        } else {
+          const typeLabel = (data.type || type).toUpperCase();
+          container.innerHTML = `
+            <div class="smart-result-heading">
+              <h3 class="cyan">📝 Generated ${typeLabel}</h3>
+              <p class="muted">${data.prompt || prompt}</p>
+            </div>
+            <div class="smart-summary" style="white-space: pre-wrap; font-family: inherit; line-height: 1.6;">${data.content}</div>
+            <button class="outline" id="copyStudioResultBtn" style="margin-top: 15px;">📋 Copy Content</button>
+          `;
+          setTimeout(() => {
+            const copyBtn = document.getElementById("copyStudioResultBtn");
+            if (copyBtn) {
+              copyBtn.addEventListener("click", async () => {
+                await navigator.clipboard.writeText(data.content);
+                alert("Copied to clipboard!");
+              });
+            }
+          }, 50);
+        }
+
+        resultBox.appendChild(container);
+
+        if (typeof logAction === "function") {
+          logAction(`AI Studio generated ${type}: "${prompt.substring(0, 30)}..."`);
+        }
+        if (typeof notify === "function") {
+          notify("Generation complete!");
+        }
+      } catch (err) {
+        console.error("AI Studio Error:", err);
+        resultBox.style.display = "block";
+        resultBox.innerHTML = `
+          <div class="smart-result" style="margin-top: 20px; border: 1px solid rgba(255, 75, 75, 0.5); background: rgba(255, 50, 50, 0.08); padding: 18px; border-radius: 12px;">
+            <h3 style="color: #ff6b6b; margin-bottom: 8px;">❌ Generation Failed</h3>
+            <p style="color: #ffd6d6; margin-bottom: 12px; font-weight: 500; font-size: 14px;">${err.message}</p>
+            <div style="font-size: 12px; color: var(--muted); line-height: 1.6;">
+              <strong>Troubleshooting:</strong>
+              <ul style="margin-left: 20px; margin-top: 6px;">
+                <li>Verify the backend is reachable: <a href="http://127.0.0.1:8000/api/health" target="_blank" style="color: var(--cyan); text-decoration: underline;">Test Health Check</a></li>
+                <li>Make sure your Gemini API key in <code>.env</code> has no extra spaces or quotes.</li>
+                <li>If Imagen 3 image generation is restricted on your key, try selecting <strong>Storyboard</strong> in the dropdown to test text generation.</li>
+              </ul>
+            </div>
+          </div>
+        `;
+      } finally {
+        generateBtn.disabled = false;
+        generateBtn.style.opacity = "1";
+      }
+    });
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initStudio);
+  } else {
+    initStudio();
+  }
 })();
